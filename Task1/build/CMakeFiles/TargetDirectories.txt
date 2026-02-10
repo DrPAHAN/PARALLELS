@@ -1,0 +1,3 @@
+/Users/dr.pahan/Documents/PARALLELS/build/CMakeFiles/sinus_sum.dir
+/Users/dr.pahan/Documents/PARALLELS/build/CMakeFiles/edit_cache.dir
+/Users/dr.pahan/Documents/PARALLELS/build/CMakeFiles/rebuild_cache.dir
