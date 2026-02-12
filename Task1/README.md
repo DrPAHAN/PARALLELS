@@ -16,3 +16,7 @@ make
 
 ## Запустить 
 ./sinus_sum
+
+## Результат 
+double: Sum 4.55085e-11
+float: Sum -0.0277862
