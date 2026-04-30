@@ -5,7 +5,7 @@
 
 int main(int argc, char** argv) {
     if (argc < 4) {
-        std::cerr << "Usage: ./simple_iter_v2 N threads iterations\n";
+        std::cerr << "Usage: ./3_v2 N threads iterations\n";
         return 1;
     }
 
@@ -43,16 +43,16 @@ int main(int argc, char** argv) {
                 x[i] = x_new[i];
             }
 
-#pragma omp barrier   // синхронизация перед следующей итерацией
+#pragma omp barrier
         }
     }
 
     auto end = std::chrono::high_resolution_clock::now();
     double time = std::chrono::duration<double>(end - start).count();
 
-    std::cout << "V2 (one parallel region) | N=" << N 
+    std::cout << "V2 (one big parallel region) | N=" << N 
               << " | threads=" << threads 
-              << " | iter=" << iterations 
+              << " | iterations=" << iterations 
               << " | time=" << time << " s" << std::endl;
 
     return 0;
