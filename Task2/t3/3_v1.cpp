@@ -5,7 +5,7 @@
 
 int main(int argc, char** argv) {
     if (argc < 4) {
-        std::cerr << "Usage: ./simple_iter_v1 N threads iterations\n";
+        std::cerr << "Usage: ./3_v1 N threads iterations\n";
         return 1;
     }
 
