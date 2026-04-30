@@ -12,16 +12,16 @@ int main(int argc, char** argv) {
 
     long long N = std::stoll(argv[1]);
     int threads = std::stoi(argv[2]);
-    int min_iter = (argc > 3) ? std::stoi(argv[3]) : 5000;   // минимум итераций
+    long long min_iter = (argc > 3) ? std::stoll(argv[3]) : 10000LL;
 
     omp_set_num_threads(threads);
 
     std::vector<double> x(N, 0.0);
     std::vector<double> x_new(N);
     double tau = 0.5 / N;
-    double eps = 1e-6;
-    int max_iter = 200000;
-    int iter = 0;
+    double eps = 1e-5;
+    long long max_iter = 300000;
+    long long iter = 0;
 
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -43,11 +43,10 @@ int main(int argc, char** argv) {
         }
 
         norm_res = std::sqrt(norm_res);
-
         ++iter;
 
-        // Выходим только если достигли точности И сделали минимум итераций
-        if (iter >= min_iter && norm_res < eps * (N + 1.0)) {
+        // Выходим, только если прошли минимум итераций И достигли нужной точности
+        if (iter >= min_iter && norm_res < eps * (N + 1)) {
             break;
         }
     }
@@ -55,7 +54,7 @@ int main(int argc, char** argv) {
     auto end = std::chrono::high_resolution_clock::now();
     double time = std::chrono::duration<double>(end - start).count();
 
-    std::cout << "V1 | N=" << N 
+    std::cout << "V1 (separate parallel) | N=" << N 
               << " | threads=" << threads 
               << " | time=" << time << " s | iterations=" << iter 
               << " | min_iter=" << min_iter << std::endl;
