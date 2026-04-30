@@ -12,7 +12,7 @@ int main(int argc, char** argv) {
 
     long long N = std::stoll(argv[1]);
     int threads = std::stoi(argv[2]);
-    long long num_iterations = std::stoll(argv[3]);   // <-- теперь явно задаём количество итераций
+    long long num_iterations = std::stoll(argv[3]);   
 
     omp_set_num_threads(threads);
 
