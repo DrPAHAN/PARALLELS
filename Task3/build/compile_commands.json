@@ -1,0 +1,20 @@
+[
+{
+  "directory": "/Users/dr.pahan/Documents/PARALLELS/Task3/build",
+  "command": "/usr/bin/c++   -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/task1_mat_vec.dir/task1_mat_vec.cpp.o -c /Users/dr.pahan/Documents/PARALLELS/Task3/task1_mat_vec.cpp",
+  "file": "/Users/dr.pahan/Documents/PARALLELS/Task3/task1_mat_vec.cpp",
+  "output": "CMakeFiles/task1_mat_vec.dir/task1_mat_vec.cpp.o"
+},
+{
+  "directory": "/Users/dr.pahan/Documents/PARALLELS/Task3/build",
+  "command": "/usr/bin/c++   -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/task2_client_server.dir/task2_client_server.cpp.o -c /Users/dr.pahan/Documents/PARALLELS/Task3/task2_client_server.cpp",
+  "file": "/Users/dr.pahan/Documents/PARALLELS/Task3/task2_client_server.cpp",
+  "output": "CMakeFiles/task2_client_server.dir/task2_client_server.cpp.o"
+},
+{
+  "directory": "/Users/dr.pahan/Documents/PARALLELS/Task3/build",
+  "command": "/usr/bin/c++   -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/test_results.dir/test_results.cpp.o -c /Users/dr.pahan/Documents/PARALLELS/Task3/test_results.cpp",
+  "file": "/Users/dr.pahan/Documents/PARALLELS/Task3/test_results.cpp",
+  "output": "CMakeFiles/test_results.dir/test_results.cpp.o"
+}
+]
