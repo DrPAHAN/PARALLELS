@@ -1,1 +1,0 @@
-/usr/bin/c++ -O3 -DNDEBUG -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/task1_mat_vec.dir/task1_mat_vec.cpp.o -o task1_mat_vec
