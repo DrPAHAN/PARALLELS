@@ -25,10 +25,10 @@ cmake --build .
 ```
 # Задание 1
 ### Результаты измерений
-<img width="1087" height="164" alt="image" src="https://github.com/user-attachments/assets/ddf5047b-75bb-48d4-8045-655cf98a22b1" />
+<img width="1082" height="162" alt="image" src="https://github.com/user-attachments/assets/372d7974-c1ab-4771-8f22-3868006e0741" />
 
 ### График ускорения
-<img width="662" height="307" alt="image" src="https://github.com/user-attachments/assets/0a7172fe-4d08-4736-88b6-9bc9c016c13e" />
+<img width="661" height="300" alt="image" src="https://github.com/user-attachments/assets/ca3549df-72de-43e7-8b9d-05552281e883" />
 
 
 ### Вывод о масштабируемости
