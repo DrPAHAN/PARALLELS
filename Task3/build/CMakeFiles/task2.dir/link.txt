@@ -1,1 +1,0 @@
-/usr/bin/clang++ CMakeFiles/task2.dir/task2_client_server.cpp.o -o bin/task2 

@@ -1,4 +1,0 @@
-/home/p.mironenko/PARALLELS/Task3/build/CMakeFiles/task1.dir
-/home/p.mironenko/PARALLELS/Task3/build/CMakeFiles/task2.dir
-/home/p.mironenko/PARALLELS/Task3/build/CMakeFiles/edit_cache.dir
-/home/p.mironenko/PARALLELS/Task3/build/CMakeFiles/rebuild_cache.dir

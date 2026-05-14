@@ -1,1 +1,0 @@
-/usr/bin/clang++ CMakeFiles/task1.dir/task1_matrix_vector.cpp.o -o bin/task1 
