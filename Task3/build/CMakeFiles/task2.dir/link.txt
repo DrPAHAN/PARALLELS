@@ -1,1 +1,1 @@
-/usr/bin/clang++ -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/task2.dir/task2_client_server.cpp.o -o bin/task2
+/usr/bin/clang++ CMakeFiles/task2.dir/task2_client_server.cpp.o -o bin/task2 
