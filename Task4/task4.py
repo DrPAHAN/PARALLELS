@@ -14,26 +14,24 @@ os.makedirs(LOG_DIR, exist_ok=True)
 
 logger = logging.getLogger('ParallelismLab')
 logger.setLevel(logging.DEBUG)
-
 file_handler = logging.FileHandler(os.path.join(LOG_DIR, 'lab.log'), encoding='utf-8')
 file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 logger.addHandler(file_handler)
-
 console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setLevel(logging.INFO)
 logger.addHandler(console_handler)
-
 
 class Sensor:
     def get(self):
         raise NotImplementedError("Subclasses must implement method get()")
 
+
 class SensorX(Sensor):
     '''Sensor X'''
     def __init__(self, delay: float):
         super().__init__()
-        self._delay = delay
-        self._data = 0
+        self._delay = delay          
+        self._data = 0               
         self._queue = queue.Queue()
         self._stop_event = threading.Event()
         self._thread = None
@@ -47,9 +45,8 @@ class SensorX(Sensor):
             raise RuntimeError(f"Failed to start SensorX thread: {e}") from e
 
     def get(self) -> int:
-        time.sleep(self._delay)
-        self._delay += 1
-        self._data += 1
+        time.sleep(self._delay)      
+        self._data += 1              
         return self._data
 
     def _worker(self):
@@ -80,12 +77,12 @@ class SensorX(Sensor):
     def __del__(self):
         self.close()
 
+
 class SensorCam(Sensor):
     def __init__(self, camera_id, resolution: tuple):
         super().__init__()
         self._camera_id = camera_id
         self._resolution = resolution
-        
         self._cam = None
         self._queue = queue.Queue()
         self._stop_event = threading.Event()
@@ -99,11 +96,9 @@ class SensorCam(Sensor):
             if not self._cam.isOpened():
                 logger.critical(f"Камера с индексом {camera_id} не открывается.")
                 raise RuntimeError(f"Failed to open camera: {camera_id}")
-
             self._cam.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[0])
             self._cam.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
             logger.info(f"Камера {camera_id} инициализирована с разрешением {resolution}")
-
             self._thread = threading.Thread(target=self._worker, daemon=True)
             self._thread.start()
         except Exception:
@@ -154,7 +149,7 @@ class WindowImage:
     def __init__(self, fps: float, window_name: str = "Sensors Display"):
         self._fps = fps
         self._window_name = window_name
-        self._wait_time = max(1, int(1000.0 / fps))
+        self._wait_time = 1
         self._created = False
         
         try:
@@ -185,39 +180,28 @@ class WindowImage:
         self.close()
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Лабораторная работа №4")
-    parser.add_argument('--camera', type=str, default='0', help='Индекс камеры (на macOS используйте 0, 1...)')
-    parser.add_argument('--resolution', type=str, default='1280x720', help='Желаемое разрешение камеры (WxH)')
-    parser.add_argument('--fps', type=float, default=30.0, help='Частота отображения картинки (Hz)')
+    parser = argparse.ArgumentParser(description="Лабораторная работа: Теория параллелизма (Python Threads)")
+    parser.add_argument('--camera', type=str, default='0', help='Индекс камеры')
+    parser.add_argument('--resolution', type=str, default='1280x720', help='Разрешение WxH')
+    parser.add_argument('--fps', type=float, default=30.0, help='Частота отображения (Hz)')
     return parser.parse_args()
 
 def main():
     args = parse_args()
-
     try:
         w, h = map(int, args.resolution.split('x'))
         resolution = (w, h)
     except ValueError:
-        logger.error("Неверный формат разрешения. Используйте например, 1280x720)")
+        logger.error("Неверный формат разрешения. Используйте WxH")
         sys.exit(1)
 
     cam_id_raw = args.camera
     if sys.platform == 'darwin':
-        if cam_id_raw.startswith('/dev/video'):
-            cam_id = 0
-        else:
-            try:
-                cam_id = int(cam_id_raw)
-            except ValueError:
-                cam_id = 0
+        cam_id = 0 if cam_id_raw.startswith('/dev/video') else int(cam_id_raw) if cam_id_raw.isdigit() else 0
     else:
-        try:
-            cam_id = int(cam_id_raw)
-        except ValueError:
-            cam_id = cam_id_raw
+        cam_id = int(cam_id_raw) if cam_id_raw.isdigit() else cam_id_raw
 
-    logger.info(f"Запуск программы (OS: {sys.platform}, Camera ID: {cam_id})...")
-    
+    logger.info(f"Запуск (OS: {sys.platform}, Cam: {cam_id})...")
     sensors = []
     window = None
     cam = None
@@ -229,6 +213,9 @@ def main():
 
         last_frame = None
         last_sensor_data = [0, 0, 0]
+        
+        target_interval = 1.0 / args.fps
+        last_render_time = time.perf_counter()
 
         while True:
             frame = cam.get_latest()
@@ -236,52 +223,47 @@ def main():
                 last_frame = frame.copy()
             elif last_frame is None:
                 last_frame = np.zeros((h, w, 3), dtype=np.uint8)
-                cv2.putText(last_frame, "Waiting for camera...", (w//4, h//2), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+                cv2.putText(last_frame, "Waiting...", (w//3, h//2), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,0,255), 2)
 
             for i, s in enumerate(sensors):
                 last_sensor_data[i] = s.get_latest()
 
-            
-            display_frame = last_frame.copy()
-            
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            font_scale = 0.8
-            font_thickness = 2
-            line_spacing = 30
-            padding = 12
-            margin = 20
-
-            text_lines = [f"Sensor X{i}: {val}" for i, val in enumerate(last_sensor_data)]
-
-            max_w = max(cv2.getTextSize(line, font, font_scale, font_thickness)[0][0] for line in text_lines)
-            box_w = max_w + padding * 2
-            box_h = len(text_lines) * line_spacing + padding * 2
-
-            frame_h, frame_w = display_frame.shape[:2]
-            x1 = frame_w - box_w - margin
-            y1 = frame_h - box_h - margin
-
-            cv2.rectangle(display_frame, (x1, y1), (x1 + box_w, y1 + box_h), (255, 255, 255), -1)
-
-            for i, line in enumerate(text_lines):
-                y_text = y1 + padding + (i + 1) * line_spacing
-                cv2.putText(display_frame, line, (x1 + padding, y_text), font, font_scale, (0, 0, 0), font_thickness, cv2.LINE_AA)
+            now = time.perf_counter()
+            if now - last_render_time >= target_interval:
+                last_render_time = now
+                display_frame = last_frame.copy()
                 
-            if window.show(display_frame):
-                logger.info("Нажата клавиша 'q'. Завершение работы...")
-                break
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                font_scale = 0.8
+                font_thickness = 2
+                line_spacing = 30
+                padding = 12
+                margin = 20
+
+                text_lines = [f"Sensor X{i}: {val}" for i, val in enumerate(last_sensor_data)]
+                max_w = max(cv2.getTextSize(line, font, font_scale, font_thickness)[0][0] for line in text_lines)
+                box_w = max_w + padding * 2
+                box_h = len(text_lines) * line_spacing + padding * 2
+                frame_h, frame_w = display_frame.shape[:2]
+                x1 = frame_w - box_w - margin
+                y1 = frame_h - box_h - margin
+
+                cv2.rectangle(display_frame, (x1, y1), (x1 + box_w, y1 + box_h), (255, 255, 255), -1)
+                for i, line in enumerate(text_lines):
+                    y_text = y1 + padding + (i + 1) * line_spacing
+                    cv2.putText(display_frame, line, (x1 + padding, y_text), font, font_scale, (0, 0, 0), font_thickness, cv2.LINE_AA)
                 
+                if window.show(display_frame):
+                    logger.info("Нажата 'q'. Завершение...")
+                    break
+
     except KeyboardInterrupt:
-        logger.info("Программа прервана пользователем (Ctrl+C).")
+        logger.info("Прервано (Ctrl+C).")
     finally:
-        for s in sensors:
-            s.close()
-        if cam:
-            cam.close()
-        if window:
-            window.close()
-        logger.info("Все ресурсы освобождены. Выход.")
+        for s in sensors: s.close()
+        if cam: cam.close()
+        if window: window.close()
+        logger.info("Ресурсы освобождены. Выход.")
 
 if __name__ == "__main__":
     main()
