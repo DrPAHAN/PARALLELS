@@ -107,7 +107,7 @@ class WindowImage:
             pass
 
 def compose_image(frame: np.ndarray, sensor_data: list) -> np.ndarray:
-    """Формирует итоговое изображение с панелью датчиков в правом нижнем углу."""
+    """Формирует итоговое изображение с панелью датчиков."""
     if frame is None:
         frame = np.zeros((720, 1280, 3), dtype=np.uint8)
 
