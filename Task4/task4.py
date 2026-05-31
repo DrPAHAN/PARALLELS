@@ -1,269 +1,229 @@
 import argparse
 import cv2
-import logging
-import numpy as np
-import os
-import queue
-import sys
-import threading
 import time
+import threading
+import queue
+import logging
+import os
+import sys
+import numpy as np
 
-
-LOG_DIR = 'log'
-os.makedirs(LOG_DIR, exist_ok=True)
-
-logger = logging.getLogger('ParallelismLab')
-logger.setLevel(logging.DEBUG)
-file_handler = logging.FileHandler(os.path.join(LOG_DIR, 'lab.log'), encoding='utf-8')
-file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-logger.addHandler(file_handler)
-console_handler = logging.StreamHandler(sys.stdout)
-console_handler.setLevel(logging.INFO)
-logger.addHandler(console_handler)
+os.makedirs("log", exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("log/lab.log", encoding="utf-8"),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 
 class Sensor:
     def get(self):
         raise NotImplementedError("Subclasses must implement method get()")
 
-
 class SensorX(Sensor):
     '''Sensor X'''
     def __init__(self, delay: float):
-        super().__init__()
-        self._delay = delay          
-        self._data = 0               
-        self._queue = queue.Queue()
-        self._stop_event = threading.Event()
-        self._thread = None
-        self._cached_value = 0
-        
-        try:
-            self._thread = threading.Thread(target=self._worker, daemon=True)
-            self._thread.start()
-        except Exception as e:
-            self.close()
-            raise RuntimeError(f"Failed to start SensorX thread: {e}") from e
+        self._delay = delay
+        self._data = 0
 
     def get(self) -> int:
-        time.sleep(self._delay)      
-        self._data += 1              
+        time.sleep(self._delay)
+        self._data += 1
         return self._data
 
-    def _worker(self):
-        while not self._stop_event.is_set():
-            try:
-                val = self.get()
-                self._queue.put_nowait(val)
-            except Exception as e:
-                logger.error(f"SensorX error: {e}")
-                time.sleep(0.1)
-
-    def get_latest(self) -> int:
-        latest = self._cached_value
-        try:
-            while True:
-                latest = self._queue.get_nowait()
-        except queue.Empty:
-            pass
-        self._cached_value = latest
-        return latest
-
-    def close(self):
-        if hasattr(self, '_stop_event'):
-            self._stop_event.set()
-        if hasattr(self, '_thread') and self._thread and self._thread.is_alive():
-            self._thread.join(timeout=1.0)
-
-    def __del__(self):
-        self.close()
-
-
 class SensorCam(Sensor):
-    def __init__(self, camera_id, resolution: tuple):
-        super().__init__()
+    def __init__(self, camera_id: str, resolution: tuple):
         self._camera_id = camera_id
         self._resolution = resolution
-        self._cam = None
-        self._queue = queue.Queue()
-        self._stop_event = threading.Event()
-        self._thread = None
-        self._cached_frame = None
-        
-        backend = cv2.CAP_AVFOUNDATION if sys.platform == 'darwin' else cv2.CAP_V4L2
-            
+        self._cap = None
+        self._init_camera()
+
+    def _init_camera(self):
         try:
-            self._cam = cv2.VideoCapture(camera_id, backend)
-            if not self._cam.isOpened():
-                logger.critical(f"Камера с индексом {camera_id} не открывается.")
-                raise RuntimeError(f"Failed to open camera: {camera_id}")
-            self._cam.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[0])
-            self._cam.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
-            logger.info(f"Камера {camera_id} инициализирована с разрешением {resolution}")
-            self._thread = threading.Thread(target=self._worker, daemon=True)
-            self._thread.start()
-        except Exception:
-            self.close()
-            raise
+            cam_source = int(self._camera_id) if self._camera_id.isdigit() else self._camera_id
+            self._cap = cv2.VideoCapture(cam_source)
+            
+            if not self._cap.isOpened():
+                logging.error(f"Камера '{self._camera_id}' не найдена или недоступна.")
+                sys.exit(1)
+                
+            self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, self._resolution[0])
+            self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self._resolution[1])
+            logging.info(f"Камера {self._camera_id} инициализирована: {self._resolution}")
+        except Exception as e:
+            logging.error(f"Ошибка инициализации камеры: {e}")
+            sys.exit(1)
 
     def get(self):
-        if not self._cam or not self._cam.isOpened():
-            return None
-        ret, frame = self._cam.read()
-        if not ret:
-            logger.warning("Не удалось прочитать кадр с камеры.")
-            return None
-        return frame
-
-    def _worker(self):
-        while not self._stop_event.is_set():
-            frame = self.get()
-            if frame is not None:
-                self._queue.put_nowait(frame)
-            else:
-                logger.error("Камера перестала отдавать кадры. Поток остановлен.")
-                self._stop_event.set()
-
-    def get_latest(self):
-        latest = self._cached_frame
         try:
-            while True:
-                latest = self._queue.get_nowait()
-        except queue.Empty:
-            pass
-        self._cached_frame = latest
-        return latest
-
-    def close(self):
-        if hasattr(self, '_stop_event'):
-            self._stop_event.set()
-        if hasattr(self, '_thread') and self._thread and self._thread.is_alive():
-            self._thread.join(timeout=1.0)
-        if hasattr(self, '_cam') and self._cam and self._cam.isOpened():
-            self._cam.release()
-            logger.info("Ресурс камеры корректно освобожден.")
+            ret, frame = self._cap.read()
+            if not ret:
+                logging.warning("Не удалось прочитать кадр. Камера могла отключиться или потерян сигнал.")
+                return None
+            return frame
+        except Exception as e:
+            logging.error(f"Ошибка чтения с камеры: {e}")
+            return None
 
     def __del__(self):
-        self.close()
+        if self._cap is not None and self._cap.isOpened():
+            self._cap.release()
+            logging.info(f"Ресурс камеры '{self._camera_id}' освобожден (RAII)")
 
 class WindowImage:
-    def __init__(self, fps: float, window_name: str = "Sensors Display"):
-        self._fps = fps
-        self._window_name = window_name
-        self._wait_time = 1
-        self._created = False
-        
+    def __init__(self, display_freq: float):
+        self._display_freq = display_freq
+        self._window_name = "Sensors Monitor"
+        self._wait_ms = max(1, int(1000 / self._display_freq))
+        self._init_window()
+
+    def _init_window(self):
         try:
-            cv2.namedWindow(self._window_name, cv2.WINDOW_NORMAL)
-            self._created = True
-            logger.info(f"Окно '{self._window_name}' создано.")
+            cv2.namedWindow(self._window_name, cv2.WINDOW_AUTOSIZE)
+            logging.info(f"Окно '{self._window_name}' создано. Частота обновления: {self._display_freq} Гц")
         except Exception as e:
-            logger.critical(f"Ошибка создания окна OpenCV: {e}")
-            raise
+            logging.error(f"Ошибка создания окна: {e}")
+            sys.exit(1)
 
-    def show(self, img) -> bool:
-        if img is None or not self._created:
-            return False
-        cv2.imshow(self._window_name, img)
-        key = cv2.waitKey(self._wait_time) & 0xFF
-        return key == ord('q')
-
-    def close(self):
-        if hasattr(self, '_created') and self._created:
-            try:
-                cv2.destroyWindow(self._window_name)
-                logger.info("Окно корректно закрыто.")
-            except Exception as e:
-                logger.error(f"Ошибка закрытия окна: {e}")
-            self._created = False
+    def show(self, img: np.ndarray) -> int:
+        try:
+            if img is None or img.size == 0:
+                logging.warning("Получено пустое изображение для отображения.")
+                return -1
+            cv2.imshow(self._window_name, img)
+            key = cv2.waitKey(self._wait_ms) & 0xFF
+            return key
+        except Exception as e:
+            logging.error(f"Ошибка отображения изображения: {e}")
+            return -1
 
     def __del__(self):
-        self.close()
+        try:
+            cv2.destroyWindow(self._window_name)
+            logging.info("Ресурс окна отображения освобожден (RAII)")
+        except Exception:
+            pass
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Лабораторная работа: Теория параллелизма (Python Threads)")
-    parser.add_argument('--camera', type=str, default='0', help='Индекс камеры')
-    parser.add_argument('--resolution', type=str, default='1280x720', help='Разрешение WxH')
-    parser.add_argument('--fps', type=float, default=30.0, help='Частота отображения (Hz)')
-    return parser.parse_args()
+def compose_image(frame: np.ndarray, sensor_data: list) -> np.ndarray:
+    """Формирует итоговое изображение с панелью датчиков в правом нижнем углу."""
+    if frame is None:
+        frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+
+    h, w = frame.shape[:2]
+
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.6
+    color_text = (0, 0, 0)
+    color_bg = (255, 255, 255)
+    thickness = 2
+    padding = 15
+    margin = 20
+
+    lines = []
+    for i, val in enumerate(sensor_data[1:], start=1):
+        lines.append(f"SensorX{i-1}: {val}")
+
+    if not lines:
+        return frame
+
+    max_w = 0
+    line_h = 0
+    for line in lines:
+        (tw, th), _ = cv2.getTextSize(line, font, font_scale, thickness)
+        max_w = max(max_w, tw)
+        line_h = max(line_h, th)
+
+    box_w = max_w + padding * 2
+    box_h = len(lines) * line_h + padding * 2 + (len(lines) - 1) * 10
+
+    x2 = w - margin
+    y2 = h - margin
+    x1 = x2 - box_w
+    y1 = y2 - box_h
+
+    cv2.rectangle(frame, (x1, y1), (x2, y2), color_bg, -1)
+
+    current_y = y1 + padding + line_h
+    for line in lines:
+        cv2.putText(frame, line, (x1 + padding, current_y), font, font_scale, color_text, thickness)
+        current_y += line_h + 10
+
+    return frame
+
+def sensor_worker(sensor: Sensor, q: queue.Queue, stop_event: threading.Event):
+    while not stop_event.is_set():
+        try:
+            data = sensor.get()
+            try:
+                q.put_nowait(data)
+            except queue.Full:
+                q.get_nowait()
+                q.put_nowait(data)
+        except Exception as e:
+            logging.error(f"Критическая ошибка в потоке датчика: {e}")
+            stop_event.set()
+            break
 
 def main():
-    args = parse_args()
+    parser = argparse.ArgumentParser(description="Лабораторная: Теория параллелизма (Python Threading)")
+    parser.add_argument("--camera", type=str, default="0", help="Имя/индекс камеры")
+    parser.add_argument("--resolution", type=str, default="1280x720", help="Разрешение камеры (ШxВ)")
+    parser.add_argument("--fps", type=float, default=10.0, help="Частота отображения картинки (Гц)")
+    args = parser.parse_args()
+
     try:
-        w, h = map(int, args.resolution.split('x'))
-        resolution = (w, h)
+        res = tuple(map(int, args.resolution.split('x')))
+        if len(res) != 2: raise ValueError
     except ValueError:
-        logger.error("Неверный формат разрешения. Используйте WxH")
+        logging.error("Неверный формат разрешения. Ожидается ШxВ, например 1280x720")
         sys.exit(1)
 
-    cam_id_raw = args.camera
-    if sys.platform == 'darwin':
-        cam_id = 0 if cam_id_raw.startswith('/dev/video') else int(cam_id_raw) if cam_id_raw.isdigit() else 0
-    else:
-        cam_id = int(cam_id_raw) if cam_id_raw.isdigit() else cam_id_raw
+    logging.info("Запуск системы параллельного опроса датчиков...")
 
-    logger.info(f"Запуск (OS: {sys.platform}, Cam: {cam_id})...")
-    sensors = []
-    window = None
-    cam = None
+    sensors = [
+        SensorCam(args.camera, res),
+        SensorX(0.01),  
+        SensorX(0.1),   
+        SensorX(1.0)   
+    ]
     
+    queues = [queue.Queue(maxsize=1) for _ in sensors]
+    stop_event = threading.Event()
+    threads = []
+
+    for sensor, q in zip(sensors, queues):
+        t = threading.Thread(target=sensor_worker, args=(sensor, q, stop_event), daemon=True)
+        t.start()
+        threads.append(t)
+
+    window = WindowImage(args.fps)
+    latest_data = [None] * len(sensors)
+
     try:
-        cam = SensorCam(cam_id, resolution)
-        sensors = [SensorX(0.01), SensorX(0.1), SensorX(1)]
-        window = WindowImage(args.fps)
+        while not stop_event.is_set():
+            for i, q in enumerate(queues):
+                try:
+                    latest_data[i] = q.get_nowait()
+                except queue.Empty:
+                    pass
 
-        last_frame = None
-        last_sensor_data = [0, 0, 0]
-        
-        target_interval = 1.0 / args.fps
-        last_render_time = time.perf_counter()
+            display_frame = compose_image(latest_data[0], latest_data)
+            key = window.show(display_frame)
 
-        while True:
-            frame = cam.get_latest()
-            if frame is not None:
-                last_frame = frame.copy()
-            elif last_frame is None:
-                last_frame = np.zeros((h, w, 3), dtype=np.uint8)
-                cv2.putText(last_frame, "Waiting...", (w//3, h//2), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,0,255), 2)
-
-            for i, s in enumerate(sensors):
-                last_sensor_data[i] = s.get_latest()
-
-            now = time.perf_counter()
-            if now - last_render_time >= target_interval:
-                last_render_time = now
-                display_frame = last_frame.copy()
+            if key == ord('q'):
+                logging.info("Нажата клавиша 'q'. Инициируется безопасное завершение...")
+                stop_event.set()
+                break
                 
-                font = cv2.FONT_HERSHEY_SIMPLEX
-                font_scale = 0.8
-                font_thickness = 2
-                line_spacing = 30
-                padding = 12
-                margin = 20
-
-                text_lines = [f"Sensor X{i}: {val}" for i, val in enumerate(last_sensor_data)]
-                max_w = max(cv2.getTextSize(line, font, font_scale, font_thickness)[0][0] for line in text_lines)
-                box_w = max_w + padding * 2
-                box_h = len(text_lines) * line_spacing + padding * 2
-                frame_h, frame_w = display_frame.shape[:2]
-                x1 = frame_w - box_w - margin
-                y1 = frame_h - box_h - margin
-
-                cv2.rectangle(display_frame, (x1, y1), (x1 + box_w, y1 + box_h), (255, 255, 255), -1)
-                for i, line in enumerate(text_lines):
-                    y_text = y1 + padding + (i + 1) * line_spacing
-                    cv2.putText(display_frame, line, (x1 + padding, y_text), font, font_scale, (0, 0, 0), font_thickness, cv2.LINE_AA)
-                
-                if window.show(display_frame):
-                    logger.info("Нажата 'q'. Завершение...")
-                    break
-
     except KeyboardInterrupt:
-        logger.info("Прервано (Ctrl+C).")
+        logging.info("Прерывание пользователем (Ctrl+C). Завершение...")
     finally:
-        for s in sensors: s.close()
-        if cam: cam.close()
-        if window: window.close()
-        logger.info("Ресурсы освобождены. Выход.")
+        stop_event.set()
+        for t in threads:
+            t.join(timeout=2.0)
+        logging.info("Все потоки завершены. Ресурсы освобождены. Программа закрыта.")
 
 if __name__ == "__main__":
     main()
