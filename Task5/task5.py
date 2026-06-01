@@ -129,13 +129,11 @@ def run_multi(input_path, output_path, model_path, num_workers=None):
     return end - start, total_frames
 
 def main():
-    parser = argparse.ArgumentParser(description="Лабораторная 5: Ускорение инференса YOLOv8s-pose")
     parser.add_argument("--video", type=str, required=True, help="Путь к видео (640x480)")
     parser.add_argument("--mode", type=str, required=True, choices=["single", "multi"], help="single или multi")
     parser.add_argument("--output", type=str, required=True, help="Имя выходного файла")
     parser.add_argument("--workers", type=int, default=None, help="Число процессов")
     parser.add_argument("--model", type=str, default="yolov8s-pose.pt", help="Модель YOLO")
-    parser.add_argument("--realtime", action="store_true", help="RealTime с камеры (+3 балла)")
     
     args = parser.parse_args()
         
