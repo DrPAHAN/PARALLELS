@@ -52,7 +52,7 @@ class VideoResource:
                 self.writer.release()
                 
             if not success:
-                raise RuntimeError("Не удалось создать VideoWriter. На macOS рекомендуется установить 'opencv-contrib-python' или использовать кодек 'avc1'.")
+                raise RuntimeError("Не удалось создать VideoWriter")
 
     def __del__(self):
         self.release()
