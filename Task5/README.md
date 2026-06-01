@@ -12,13 +12,12 @@ pip install ultralytics opencv-python numpy
 Модель yolov8s-pose.pt загрузится автоматически при первом запуске
 
 ## Запуск
-### Одиночный режим (базовая линия)
+### Однопоточный режим
 ```
 python3 task5.py --video input.mp4 --mode single --output out_single.mp4
 ```
-### Многопроцессорный режим
+### Многопоточный режим
 ```
-# Автоматический подбор числа процессов (по количеству ядер CPU)
 python task5.py --video input.mp4 --mode multi --output out_multi.mp4
 ```
 
