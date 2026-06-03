@@ -1,0 +1,9 @@
+size,target,time_sec,iterations,error
+128,host,,,
+128,multicore,,,
+256,host,,,
+256,multicore,,,
+512,host,,,
+512,multicore,,,
+1024,host,,,
+1024,multicore,,,
