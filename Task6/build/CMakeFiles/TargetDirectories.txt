@@ -1,3 +1,0 @@
-/Users/dr.pahan/Documents/PARALLELS/Task6/build/CMakeFiles/task6.dir
-/Users/dr.pahan/Documents/PARALLELS/Task6/build/CMakeFiles/edit_cache.dir
-/Users/dr.pahan/Documents/PARALLELS/Task6/build/CMakeFiles/rebuild_cache.dir
