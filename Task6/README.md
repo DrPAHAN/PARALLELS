@@ -10,20 +10,24 @@ cmake ..
 make
 ```
 
-Для NVHPC/OpenACC:
-
-```bash
-cmake -S . -B build-gpu -DCMAKE_CXX_COMPILER=nvc++ -DOPENACC_TARGET=gpu -DCMAKE_BUILD_TYPE=Release
-cmake --build build-gpu -j
+## Проверка корректности (матрицы 10×10 и 13×13)
+```
+export ACC_DEVICE_TYPE=gpu
+./heat_solver -n 10 --eps=1e-6 --max-iter=1000000 -o result_10.txt --print
+./heat_solver -n 13 --eps=1e-6 --max-iter=1000000 -o result_13.txt --print
 ```
 
-`OPENACC_TARGET` может быть `host`, `multicore` или `gpu`. Для старых установок можно заменить `nvc++` на `pgc++`.
-
-## Запуск
-
-```bash
-./build/task6 --size 512 --eps 1e-6 --max-iter 1000000 --output result_512.txt
-./build/task6 -n 10 -e 1e-6 -i 1000000 -p -o result_10.txt
+## Замер производительности (CPU и GPU)
 ```
+# Одно ядро CPU
+export ACC_DEVICE_TYPE=host
+./heat_solver -n 512 --eps=1e-6 --max-iter=1000000 -o cpu_host_512.txt
 
-Параметры: `--size/-n`, `--eps/-e`, `--max-iter/-i`, `--output/-o`, `--print/-p`.
+# Многоядерный CPU (использует все доступные ядра)
+export ACC_DEVICE_TYPE=multicore
+./heat_solver -n 512 --eps=1e-6 --max-iter=1000000 -o cpu_multi_512.txt
+
+# GPU (графический ускоритель)
+export ACC_DEVICE_TYPE=gpu
+./heat_solver -n 512 --eps=1e-6 --max-iter=1000000 -o gpu_512.txt
+```
