@@ -51,9 +51,9 @@ void set_boundaries(Matrix& u, int n) {
     const double tl = 10, tr = 20, br = 30, bl = 20;
     for (int k = 0; k < n; ++k) {
         double t = static_cast<double>(k) / (n - 1);
-        u[pos(0, k, n)]     = tl + (tr - tl) * t;
+        u[pos(0, k, n)] = tl + (tr - tl) * t;
         u[pos(n - 1, k, n)] = bl + (br - bl) * t;
-        u[pos(k, 0, n)]     = tl + (bl - tl) * t;
+        u[pos(k, 0, n)] = tl + (bl - tl) * t;
         u[pos(k, n - 1, n)] = tr + (br - tr) * t;
     }
 }
